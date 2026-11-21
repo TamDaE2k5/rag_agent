@@ -9,6 +9,8 @@
 > **Đồ án môn học / tốt nghiệp:** Xây dựng hệ thống AI Agent làm trợ lý học tập chuyên ngành Tự động hóa lưới điện phân phối.
 > 
 > Hệ thống có khả năng nhận diện ảnh đề bài bằng **tiếng Trung**, tra cứu tri thức trực tiếp từ **duy nhất một cuốn PDF giáo trình tiếng Trung (233 trang)**, kết hợp **bộ tính toán an toàn Python (Calculator)** và trình bày lời giải chi tiết bằng **tiếng Việt (Giai đoạn 1)** cùng **tiếng Trung giản thể (Giai đoạn 2)**.
+>
+> 🚀 **Dành cho bạn sinh viên không chuyên IT:** Xem ngay hướng dẫn cài đặt từ con số 0 trên máy tính Windows mới tại: 👉 [HUONG_DAN_CHAY_WINDOWS.md](HUONG_DAN_CHAY_WINDOWS.md) (kèm cách lấy Gemini API Key miễn phí).
 
 ---
 
