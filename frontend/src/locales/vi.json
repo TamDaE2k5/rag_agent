@@ -1,0 +1,23 @@
+{
+  "app_title": "AI Trợ lý Tự động hóa Lưới điện Phân phối",
+  "tab_solver": "Giải bài tập qua ảnh",
+  "tab_chat": "Hỏi đáp chuyên ngành (PDF)",
+  "tab_history": "Lịch sử phiên",
+  "upload_title": "Tải ảnh bài tập tiếng Trung",
+  "upload_hint": "Kéo thả hoặc bấm để chọn ảnh JPG, PNG (sơ đồ điện, đề thi, bài tập)",
+  "btn_rotate": "Xoay ảnh",
+  "btn_solve": "Bắt đầu phân tích & giải bài",
+  "btn_solving": "Đang nhận diện & tính toán...",
+  "status_ready": "Hệ thống sẵn sàng",
+  "status_processing": "Đang gọi Vision AI & bóc tách dữ kiện...",
+  "section_extracted": "1. Dữ kiện trích xuất & Sơ đồ",
+  "section_solution": "2. Lời giải chi tiết từng bước",
+  "section_conclusion": "3. Kết luận & Đáp số",
+  "source_citation": "Căn cứ lý thuyết",
+  "verified_badge": "Đã kiểm chứng bằng Python Calculator",
+  "chat_placeholder": "Nhập câu hỏi kỹ thuật điện (tiếng Trung hoặc tiếng Việt)...",
+  "chat_send": "Gửi câu hỏi",
+  "chat_grounded_note": "Hệ thống chỉ truy xuất trực tiếp từ một PDF giáo trình tiếng Trung duy nhất",
+  "lang_vi": "Tiếng Việt",
+  "lang_zh": "中文 (zh-CN)"
+}

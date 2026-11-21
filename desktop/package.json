@@ -1,0 +1,21 @@
+{
+  "name": "distribution-grid-ai-agent-desktop",
+  "version": "1.2.0",
+  "description": "Ứng dụng máy tính AI Trợ lý Tự động hóa Lưới điện Phân phối",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "ai-agent",
+    "power-grid"
+  ],
+  "author": "TamDaE",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}

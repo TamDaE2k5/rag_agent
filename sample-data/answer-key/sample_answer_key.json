@@ -1,0 +1,15 @@
+{
+  "TC-01": {
+    "solution_steps": [
+      "Bước 1: Tính góc lệch pha phi và công suất phản kháng Q = P * tan(phi) = 1200 * 0.62 = 744 kvar",
+      "Bước 2: Áp dụng công thức tổn thất điện áp Delta U = (P*R + Q*X) / U_n = (1200*2.5 + 744*3.2) / 10 = 538.08 V",
+      "Bước 3: Tính phần trăm tổn thất Delta U% = (538.08 / 10000) * 100% = 5.38%"
+    ],
+    "final_answer": "538.08 V (5.38%)",
+    "verified": true
+  },
+  "TC-02": {
+    "summary": "Recloser thực hiện chu trình cắt - đóng lại, Sectionalizer đếm số lần mất điện trong trạng thái không có dòng điện để mở cô lập phân đoạn bị sự cố.",
+    "verified": true
+  }
+}

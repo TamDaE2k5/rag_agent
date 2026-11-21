@@ -1,0 +1,45 @@
+{
+  "project": "AI Agent Tự động hóa Lưới điện Phân phối",
+  "version": "1.2.0",
+  "total_test_cases": 3,
+  "test_cases": [
+    {
+      "id": "TC-01",
+      "type": "calculation",
+      "image": "sample-data/questions/anh_bai_tap_mau.jpeg",
+      "title": "Tính toán tổn thất điện áp đường dây trung áp 10kV",
+      "input_language": "zh-CN",
+      "expected_output_language": "vi",
+      "expected_parameters": {
+        "U_n": "10 kV",
+        "P": "1200 kW",
+        "cos_phi": 0.85,
+        "R": "2.5 Ohm",
+        "X": "3.2 Ohm"
+      },
+      "expected_result": "Delta U = 538.08 V (5.38%)",
+      "expected_reference_page": "PDF giáo trình, trang 42"
+    },
+    {
+      "id": "TC-02",
+      "type": "theory_diagram",
+      "title": "Nguyên lý phối hợp bảo vệ Recloser và Sectionalizer",
+      "input_language": "zh-CN",
+      "question_zh": "请简述配电网中重合器（Recloser）与分段器（Sectionalizer）配合隔离故障的基本原理。",
+      "expected_keywords": ["重合器", "分段器", "次数计数", "故障隔离", "FLISR"],
+      "expected_reference_page": "PDF giáo trình, trang 140"
+    },
+    {
+      "id": "TC-03",
+      "type": "short_circuit",
+      "title": "Tính toán dòng ngắn mạch 3 pha trên xuất tuyến 10.5kV",
+      "input_language": "zh-CN",
+      "expected_parameters": {
+        "U_tb": "10.5 kV",
+        "Z_Sigma": "1.2 Ohm"
+      },
+      "expected_result": "I_sc^(3) = 5.052 kA",
+      "expected_reference_page": "PDF giáo trình, trang 88"
+    }
+  ]
+}

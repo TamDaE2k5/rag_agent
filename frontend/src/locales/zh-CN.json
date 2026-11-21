@@ -1,0 +1,23 @@
+{
+  "app_title": "配电网自动化技术 AI 助教",
+  "tab_solver": "图片解题",
+  "tab_chat": "专业问答 (基于教材)",
+  "tab_history": "历史记录",
+  "upload_title": "上传中文习题图片",
+  "upload_hint": "拖拽或点击选择 JPG、PNG 图片（电路单线图、考试题、习题）",
+  "btn_rotate": "旋转图片",
+  "btn_solve": "开始分析与解答",
+  "btn_solving": "正在识别与计算...",
+  "status_ready": "系统就绪",
+  "status_processing": "正在调用视觉 AI 并提取已知条件...",
+  "section_extracted": "1. 题目已知条件与单线图",
+  "section_solution": "2. 标准分步推导解析",
+  "section_conclusion": "3. 最终答案与结论",
+  "source_citation": "理论依据来源",
+  "verified_badge": "已通过 Python 算法库精确校验",
+  "chat_placeholder": "输入配电网专业问题（中文或越文）...",
+  "chat_send": "发送提问",
+  "chat_grounded_note": "本系统仅直接检索单一指定的中文教材 PDF",
+  "lang_vi": "Tiếng Việt",
+  "lang_zh": "中文 (zh-CN)"
+}
