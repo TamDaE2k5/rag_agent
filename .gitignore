@@ -39,5 +39,10 @@ Thumbs.db
 *.log
 /tmp/
 
-# Redundant duplicate original books folder (use backend/knowledge/course_textbook.pdf instead)
+# Agent internal skills & local tooling
+.agents/
+
+# Redundant duplicate original books & images folder
 books/
+images/
+
