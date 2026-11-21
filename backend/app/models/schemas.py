@@ -34,10 +34,13 @@ class SolutionStep(BaseModel):
     verified_by_tool: bool = Field(False, description="Được kiểm tra bởi Python Calculator")
 
 class SolutionResponse(BaseModel):
+    model_config = {"extra": "allow"}
+
     session_id: str
     status: str = "success"
     problem_type: str
     extracted_data: ExtractedData
+    parameters: Optional[List[ParameterItem]] = None
     steps: List[SolutionStep] = Field(default_factory=list)
     final_answer: str = Field(..., description="Đáp số cuối cùng")
     unit: str = Field("", description="Đơn vị kết quả")
@@ -56,6 +59,8 @@ class ChatMessageRequest(BaseModel):
     language: str = Field("vi", description="Ngôn ngữ câu trả lời mong muốn: vi hoặc zh-CN")
 
 class ChatResponse(BaseModel):
+    model_config = {"extra": "allow"}
+
     session_id: str
     direct_answer: str = Field(..., description="Trả lời trực tiếp kết luận")
     explanation: str = Field(..., description="Giải thích nguyên lý/cơ chế")

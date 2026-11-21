@@ -11,17 +11,17 @@
 - **Mức độ ưu tiên:** 🚨 **CRITICAL**
 
 ### Danh sách công việc:
-- [ ] **S1.1 - Khởi tạo package Python:** Bổ sung `__init__.py` vào toàn bộ các thư mục package (`backend/`, `backend/app/`, `backend/app/api/`, `backend/app/api/v1/`, `backend/app/core/`, `backend/app/models/`, `backend/app/services/`, `backend/app/providers/`, `backend/app/agent/`, `backend/app/tests/`).
-- [ ] **S1.2 - Chuẩn hóa dependencies:** Làm sạch `backend/requirements.txt`:
+- [x] **S1.1 - Khởi tạo package Python:** Bổ sung `__init__.py` vào toàn bộ các thư mục package (`backend/`, `backend/app/`, `backend/app/api/`, `backend/app/api/v1/`, `backend/app/core/`, `backend/app/models/`, `backend/app/services/`, `backend/app/providers/`, `backend/app/agent/`, `backend/app/tests/`).
+- [x] **S1.2 - Chuẩn hóa dependencies:** Làm sạch `backend/requirements.txt`:
   - Loại bỏ `pydantic-settings` (đã viết code custom parser nhẹ hơn).
   - Chuẩn hóa thư viện Google GenAI (dùng `google-genai` hoặc `google-generativeai` thống nhất).
   - Đảm bảo `fastapi`, `uvicorn`, `pillow`, `sqlalchemy`, `aiosqlite`, `python-multipart` được cài đặt chuẩn xác.
-- [ ] **S1.3 - Cài đặt môi trường Backend:** Chạy `pip install -r backend/requirements.txt` trong virtual environment.
-- [ ] **S1.4 - Cài đặt môi trường Frontend:** Chạy `npm install` tại thư mục `frontend/`.
-- [ ] **S1.5 - Cấu hình API Key:** Tạo file `backend/.env` với `GEMINI_API_KEY` thực tế (lấy từ Google AI Studio miễn phí).
-- [ ] **S1.6 - Khởi động kiểm thử Backend:** Chạy `uvicorn backend.app.main:app --port 8000` và kiểm tra endpoint `/api/health`.
-- [ ] **S1.7 - Khởi động kiểm thử Frontend:** Chạy `npm run dev` tại `frontend/` và kiểm tra giao diện trên trình duyệt `http://localhost:5173`.
-- [ ] **S1.8 - E2E Smoke Test:** Tải ảnh mẫu `sample-data/questions/anh_bai_tap_mau.jpeg` lên giao diện, kiểm tra luồng nhận diện và trả kết quả thật từ Gemini.
+- [x] **S1.3 - Cài đặt môi trường Backend:** Chạy `pip install -r backend/requirements.txt` trong virtual environment.
+- [x] **S1.4 - Cài đặt môi trường Frontend:** Chạy `npm install` tại thư mục `frontend/`.
+- [x] **S1.5 - Cấu hình API Key:** Tạo file `backend/.env` với `GEMINI_API_KEY` thực tế (lấy từ Google AI Studio miễn phí).
+- [x] **S1.6 - Khởi động kiểm thử Backend:** Chạy `uvicorn backend.app.main:app --port 8000` và kiểm tra endpoint `/api/health`.
+- [x] **S1.7 - Khởi động kiểm thử Frontend:** Chạy `npm run dev` tại `frontend/` và kiểm tra giao diện trên trình duyệt `http://localhost:5173`.
+- [x] **S1.8 - E2E Smoke Test:** Tải ảnh mẫu `sample-data/questions/anh_bai_tap_mau.jpeg` lên giao diện, kiểm tra luồng nhận diện và trả kết quả thật từ Gemini.
 
 ---
 
@@ -31,22 +31,22 @@
 - **Mức độ ưu tiên:** ⚠️ **HIGH**
 
 ### Danh sách công việc:
-- [ ] **S2.1 - Kích hoạt Vector Search thực thụ (FR-23):**
+- [x] **S2.1 - Kích hoạt Vector Search thực thụ (FR-23):**
   - Xóa bỏ lệnh `pass` rỗng tại dòng 73 `backend/app/services/rag_service.py`.
   - Triển khai tính toán cosine similarity giữa câu truy vấn và ma trận `vectors.npy` (233 trang).
   - Tích hợp thêm phương án Google Embedding API (`models/text-embedding-004`) để hiểu ngữ nghĩa tiếng Trung sâu hơn.
-- [ ] **S2.2 - Xây dựng Agent Reasoning & Verification Loop:**
+- [x] **S2.2 - Xây dựng Agent Reasoning & Verification Loop:**
   - Nâng cấp `AgentOrchestrator`:
     1. *Bước 1 - Vision Extraction:* Trích xuất đề bài, sơ đồ và thông số kèm độ tin cậy (`confidence`).
     2. *Bước 2 - Confidence Check (FR-08):* Nếu thông số mờ/không chắc chắn, trả về yêu cầu người dùng xác nhận.
     3. *Bước 3 - RAG Retrieval:* Truy xuất phương pháp giải và công thức chuẩn từ PDF giáo trình.
     4. *Bước 4 - Deterministic Calculator Verification (FR-10, FR-11):* Dùng Python tính toán độc lập, đối chiếu kết quả của AI vs. Python.
     5. *Bước 5 - Auto-Correction:* Nếu AI tính nhầm số học, tự động sửa bằng giá trị chuẩn từ Python và gắn cờ `verified_by_tool: true`.
-- [ ] **S2.3 - Bộ phân tích JSON an toàn (`Safe JSON Parser`):**
+- [x] **S2.3 - Bộ phân tích JSON an toàn (`Safe JSON Parser`):**
   - Viết hàm bóc tách JSON chống crash trong `GeminiProvider`: hỗ trợ regex lọc khối ` ```json ... ``` ` và tự sửa lỗi cú pháp phổ biến của LLM.
-- [ ] **S2.4 - Ngữ cảnh hội thoại đa lượt (Multi-turn Chat Context - FR-13):**
+- [x] **S2.4 - Ngữ cảnh hội thoại đa lượt (Multi-turn Chat Context - FR-13):**
   - Cập nhật `backend/app/api/v1/chat.py` nhận `session_id`, lưu trữ và nạp lịch sử N tin nhắn gần nhất để duy trì ngữ cảnh trao đổi.
-- [ ] **S2.5 - Lưu trữ lịch sử phiên thực tế vào SQLite (FR-15):**
+- [x] **S2.5 - Lưu trữ lịch sử phiên thực tế vào SQLite (FR-15):**
   - Thay thế mock data cứng trong `backend/app/api/v1/history.py` bằng thao tác đọc/ghi cơ sở dữ liệu `DbSession` qua SQLAlchemy + aiosqlite.
 
 ---
@@ -57,19 +57,19 @@
 - **Mức độ ưu tiên:** 🟡 **MEDIUM**
 
 ### Danh sách công việc:
-- [ ] **S3.1 - Render công thức toán KaTeX:**
+- [x] **S3.1 - Render công thức toán KaTeX:**
   - Thay thế chuỗi raw LaTeX text tại `ImageSolver.tsx` bằng component hiển thị KaTeX (`katex.renderToString` hoặc thẻ chứa KaTeX).
-- [ ] **S3.2 - Giao diện xác nhận tham số đề bài (FR-08):**
+- [x] **S3.2 - Giao diện xác nhận tham số đề bài (FR-08):**
   - Thêm modal/bảng cho phép sinh viên click chỉnh sửa trực tiếp giá trị các đại lượng ($P, Q, cos\varphi, R, X, U$) trước khi bấm giải lại.
-- [ ] **S3.3 - Nút sao chép lời giải ra Clipboard (FR-16):**
+- [x] **S3.3 - Nút sao chép lời giải ra Clipboard (FR-16):**
   - Thêm nút "Sao chép lời giải" (dạng văn bản / Markdown định dạng đẹp) kèm thông báo toast thành công.
-- [ ] **S3.4 - Kéo thả ảnh thực sự (Drag-and-Drop):**
+- [x] **S3.4 - Kéo thả ảnh thực sự (Drag-and-Drop):**
   - Bổ sung các event handler `onDragOver`, `onDragLeave`, `onDrop` cho khung tải ảnh bài tập.
-- [ ] **S3.5 - Hiển thị trạng thái xử lý từng bước (Progress Steps - FR-17):**
+- [x] **S3.5 - Hiển thị trạng thái xử lý từng bước (Progress Steps - FR-17):**
   - Hiển thị tiến trình trực quan: *"Đang tiền xử lý ảnh..."* $\rightarrow$ *"Đang trích xuất dữ kiện..."* $\rightarrow$ *"Đang tra cứu giáo trình..."* $\rightarrow$ *"Đang kiểm chứng tính toán..."*.
-- [ ] **S3.6 - Hộp xem trích dẫn sách (PDF Excerpt Modal):**
+- [x] **S3.6 - Hộp xem trích dẫn sách (PDF Excerpt Modal):**
   - Khi click vào huy hiệu "PDF giáo trình, trang X", mở popup hiển thị nguyên văn đoạn trích tiếng Trung và bản dịch tiếng Việt từ trang sách đó.
-- [ ] **S3.7 - Chat UX hoàn thiện:**
+- [x] **S3.7 - Chat UX hoàn thiện:**
   - Thêm hiệu ứng gõ phím / typing spinner khi AI đang phản hồi; nút xóa lịch sử chat phiên làm việc.
 
 ---

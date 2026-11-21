@@ -8,18 +8,18 @@ Mục tiêu: Xây dựng giao diện trực quan, mượt mà, hỗ trợ song n
 - [x] **T-FE-01:** Khởi tạo dự án Vite + React + TypeScript + Tailwind CSS.
 - [x] **T-FE-02:** Thiết kế Navbar hiện đại với logo, chuyển tab và nút gạt song ngữ VI / zh-CN.
 - [x] **T-FE-03:** Xây dựng component `ImageSolver`: vùng tải ảnh, xem trước ảnh, nút xoay ảnh $90^\circ$.
-- [ ] **T-FE-03B:** Bổ sung xử lý sự kiện kéo thả thực sự (`onDragOver`, `onDragLeave`, `onDrop`) thay vì chỉ click chọn file.
+- [x] **T-FE-03B:** Bổ sung xử lý sự kiện kéo thả thực sự (`onDragOver`, `onDragLeave`, `onDrop`) thay vì chỉ click chọn file.
 - [x] **T-FE-04:** Bố cục kết quả lời giải 3 phần rõ ràng:
   - Bảng dữ kiện trích xuất & sơ đồ.
   - Lời giải chi tiết từng bước có huy hiệu kiểm chứng toán học.
   - Kết luận đáp số & thẻ trích dẫn số trang giáo trình.
 - [x] **T-FE-05:** Xây dựng component `ChatGrounded` cho luồng hỏi đáp chuyên ngành từ PDF giáo trình.
-- [ ] **T-FE-06 (HIGH):** Tích hợp render KaTeX thực tế: hiển thị công thức toán học $\LaTeX$ đẹp mắt thay vì in chuỗi thô `{step.formula_latex}`.
-- [ ] **T-FE-07 (FR-08):** Bổ sung Modal/Bảng cho phép người dùng click sửa trực tiếp giá trị các tham số mờ hoặc nhận diện sai trước khi bấm "Giải lại".
-- [ ] **T-FE-08 (FR-16):** Thêm nút "Sao chép lời giải" (Copy to Clipboard) định dạng Markdown/Text kèm toast thông báo thành công.
-- [ ] **T-FE-09 (FR-17):** Hiển thị thanh tiến trình xử lý chi tiết (Đang tiền xử lý ảnh $\rightarrow$ Trích xuất $\rightarrow$ Tra cứu giáo trình $\rightarrow$ Tính toán).
-- [ ] **T-FE-10:** Hộp thoại xem trích dẫn sách gốc (Source Excerpt Modal): bấm vào số trang để đọc đoạn văn bản gốc và bản dịch tiếng Việt.
-- [ ] **T-FE-11:** Hiệu ứng gõ phím / typing spinner khi gửi câu hỏi trong màn hình `ChatGrounded`.
+- [x] **T-FE-06 (HIGH):** Tích hợp render KaTeX thực tế: hiển thị công thức toán học $\LaTeX$ đẹp mắt thay vì in chuỗi thô `{step.formula_latex}`.
+- [x] **T-FE-07 (FR-08):** Bổ sung Modal/Bảng cho phép người dùng click sửa trực tiếp giá trị các tham số mờ hoặc nhận diện sai trước khi bấm "Giải lại".
+- [x] **T-FE-08 (FR-16):** Thêm nút "Sao chép lời giải" (Copy to Clipboard) định dạng Markdown/Text kèm toast thông báo thành công.
+- [x] **T-FE-09 (FR-17):** Hiển thị thanh tiến trình xử lý chi tiết (Đang tiền xử lý ảnh $\rightarrow$ Trích xuất $\rightarrow$ Tra cứu giáo trình $\rightarrow$ Tính toán).
+- [x] **T-FE-10:** Hộp thoại xem trích dẫn sách gốc (Source Excerpt Modal): bấm vào số trang để đọc đoạn văn bản gốc và bản dịch tiếng Việt.
+- [x] **T-FE-11:** Hiệu ứng gõ phím / typing spinner khi gửi câu hỏi trong màn hình `ChatGrounded`.
 
 ---
 

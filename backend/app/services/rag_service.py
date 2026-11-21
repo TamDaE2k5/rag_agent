@@ -1,7 +1,9 @@
 import os
 import json
 import re
+import math
 from typing import List, Dict, Any, Optional, Tuple
+import numpy as np
 from backend.app.core.config import settings
 from backend.app.core.logger import logger
 from backend.app.services.vector_store import vector_store
@@ -13,7 +15,9 @@ class RAGService:
     """
     def __init__(self):
         self.index_file = os.path.join(settings.INDEX_DIR, "pages.json")
+        self.vocab_file = os.path.join(settings.INDEX_DIR, "vocab.json")
         self.pages: List[Dict[str, Any]] = []
+        self.vocab: List[str] = []
         self._load_index()
 
     def _load_index(self):
@@ -28,6 +32,83 @@ class RAGService:
                 self.pages = []
         else:
             logger.warning(f"Index file not found at {self.index_file}. Run scripts/ingest_pdf.py to generate.")
+
+        # Nạp từ vựng 256 bigram để tạo vector truy vấn đồng bộ với vectors.npy
+        if os.path.exists(self.vocab_file):
+            try:
+                with open(self.vocab_file, "r", encoding="utf-8") as f:
+                    self.vocab = json.load(f)
+                logger.info(f"Loaded {len(self.vocab)} bigram vocabulary terms for vector search.")
+            except Exception as e:
+                logger.error(f"Error loading vocab file: {e}")
+                self.vocab = []
+        elif self.pages:
+            # Tự động tính toán top vocab nếu file chưa có
+            from collections import Counter
+            corpus = [p["text"] for p in self.pages]
+            vocab_counter = Counter()
+            for doc in corpus:
+                for i in range(len(doc) - 1):
+                    bg = doc[i:i+2]
+                    if '\u4e00' <= bg[0] <= '\u9fff' and '\u4e00' <= bg[1] <= '\u9fff':
+                        vocab_counter[bg] += 1
+            self.vocab = [term for term, count in vocab_counter.most_common(256)]
+            try:
+                with open(self.vocab_file, "w", encoding="utf-8") as f:
+                    json.dump(self.vocab, f, ensure_ascii=False)
+            except Exception as ex:
+                logger.warning(f"Could not persist vocab file: {ex}")
+
+    def vectorize_query(self, query: str) -> np.ndarray:
+        """
+        Chuyển đổi câu truy vấn thành vector đặc trưng trong không gian 256 chiều
+        của ma trận vectors.npy (Bigram TF-IDF / Log-frequency).
+        """
+        if not self.vocab:
+            return np.zeros(256, dtype=np.float32)
+        v = np.zeros(len(self.vocab), dtype=np.float32)
+        for i, term in enumerate(self.vocab):
+            count = query.count(term)
+            if count > 0:
+                v[i] = 1.0 + math.log(count)
+        norm = np.linalg.norm(v)
+        if norm > 0:
+            v = v / norm
+        return v
+
+    def embed_text_with_google(self, text: str) -> Optional[List[float]]:
+        """
+        Hỗ trợ tạo vector embedding qua Google Gemini Embedding API (models/text-embedding-004)
+        khi người dùng cấu hình và yêu cầu.
+        """
+        if not settings.GEMINI_API_KEY:
+            return None
+        try:
+            from google import genai
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            response = client.models.embed_content(
+                model="models/text-embedding-004",
+                contents=text
+            )
+            if hasattr(response, "embedding") and hasattr(response.embedding, "values"):
+                return response.embedding.values
+            elif hasattr(response, "embeddings") and len(response.embeddings) > 0:
+                return response.embeddings[0].values
+        except Exception as e:
+            logger.debug(f"Google embedding API call skipped/failed: {e}")
+            return None
+
+    def search_vector(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+        """
+        Tìm kiếm ngữ nghĩa bằng Cosine Similarity trên ma trận vectors.npy (233 trang) (FR-23)
+        """
+        if vector_store.embeddings is None or len(vector_store.metadata) == 0:
+            return []
+
+        q_vec = self.vectorize_query(query)
+        if np.linalg.norm(q_vec) > 0:
+            return vector_store.search_by_vector(q_vec.tolist(), top_k=top_k)
+        return []
 
     def search_keyword(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """Tìm kiếm theo từ khóa / tần suất xuất hiện (Sparse Retrieval)"""
@@ -51,7 +132,7 @@ class RAGService:
             if score > 0:
                 scored_pages.append({
                     "page_number": p["page_number"],
-                    "score": score,
+                    "score": float(score),
                     "text": text[:1200],
                     "reference": f"PDF giáo trình, trang {p['page_number']}"
                 })
@@ -61,21 +142,66 @@ class RAGService:
 
     def search(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """
-        Tìm kiếm Hybrid RAG:
-        1. Ưu tiên Vector Search nếu đã nạp vector embedding trong Vector Database.
-        2. Kết hợp với Keyword Search để đảm bảo các thuật ngữ viết tắt và ký hiệu điện không bị bỏ sót.
+        Tìm kiếm Hybrid RAG (FR-23):
+        1. Thực hiện Vector Search bằng Cosine Similarity trên vectors.npy (233 trang).
+        2. Thực hiện Keyword Search (Sparse Retrieval) dựa trên tần suất xuất hiện từ khóa.
+        3. Kết hợp và xếp hạng lại để đảm bảo không bỏ sót thuật ngữ và trích dẫn chuẩn số trang.
         """
-        # Nếu VectorStore đã có dữ liệu vector
+        vector_results = []
         if vector_store.embeddings is not None and len(vector_store.metadata) > 0:
-            # Ở chế độ có embedding
             try:
-                # Tìm kiếm bằng vector (nếu query vector được truyền hoặc tính toán)
-                pass
+                vector_results = self.search_vector(query, top_k=top_k * 2)
             except Exception as e:
                 logger.warning(f"Vector search failed, falling back to keyword search: {e}")
 
-        # Tìm kiếm kết hợp
-        return self.search_keyword(query, top_k=top_k)
+        keyword_results = self.search_keyword(query, top_k=top_k * 2)
+
+        if not vector_results and not keyword_results:
+            return []
+        if not vector_results:
+            return keyword_results[:top_k]
+        if not keyword_results:
+            return vector_results[:top_k]
+
+        # Chuẩn hóa điểm keyword
+        max_kw_score = max((r.get("score", 1.0) for r in keyword_results), default=1.0)
+        if max_kw_score <= 0:
+            max_kw_score = 1.0
+
+        page_dict: Dict[int, Dict[str, Any]] = {}
+
+        # Gộp điểm Vector Search (trọng số 0.6)
+        for r in vector_results:
+            p_num = r["page_number"]
+            sim = r.get("similarity_score", 0.0)
+            page_dict[p_num] = {
+                "page_number": p_num,
+                "score": float(sim * 0.6),
+                "text": r["text"],
+                "reference": r["reference"],
+                "vector_sim": sim,
+                "keyword_score": 0.0
+            }
+
+        # Gộp điểm Keyword Search (trọng số 0.4)
+        for r in keyword_results:
+            p_num = r["page_number"]
+            norm_kw = (r.get("score", 0.0) / max_kw_score) * 0.4
+            if p_num in page_dict:
+                page_dict[p_num]["score"] += norm_kw
+                page_dict[p_num]["keyword_score"] = r.get("score", 0.0)
+            else:
+                page_dict[p_num] = {
+                    "page_number": p_num,
+                    "score": float(norm_kw),
+                    "text": r["text"],
+                    "reference": r["reference"],
+                    "vector_sim": 0.0,
+                    "keyword_score": r.get("score", 0.0)
+                }
+
+        combined_results = sorted(page_dict.values(), key=lambda x: x["score"], reverse=True)
+        return combined_results[:top_k]
 
     def get_grounded_context(self, query: str) -> Tuple[str, List[str]]:
         """Trả về ngữ cảnh trích đoạn kèm danh sách số trang tham chiếu"""
