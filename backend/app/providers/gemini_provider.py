@@ -73,24 +73,41 @@ def safe_json_loads(text: str) -> Dict[str, Any]:
             "raw_text": raw[:1000]
         }
 
+FALLBACK_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-latest",
+    "gemini-3.5-flash",
+    "gemini-1.5-flash",
+]
+
 class GeminiProvider:
     """
     Adapter tích hợp Google Gemini API qua Direct REST API thuần túy (HTTP POST)
     Độc lập 100%, không phụ thuộc vào SDK ngoài (google-genai hay google-generativeai).
+    Hỗ trợ tự động chuyển đổi mô hình (Model Failover) sang các phiên bản hiện hành.
     """
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.model_name = settings.GEMINI_MODEL or "gemini-1.5-flash"
+        self.model_name = settings.GEMINI_MODEL or "gemini-3.5-flash-lite"
         self._client = None
         if self.model_name.startswith("models/"):
             self.model_name = self.model_name.replace("models/", "")
 
-    def _get_api_url(self) -> str:
-        return f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
+    def _get_api_url(self, model: Optional[str] = None) -> str:
+        m = model or self.model_name
+        return f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={self.api_key}"
+
+    def _get_candidate_models(self) -> List[str]:
+        candidates = [self.model_name]
+        for fb in FALLBACK_MODELS:
+            if fb not in candidates:
+                candidates.append(fb)
+        return candidates
 
     def test_connection(self) -> Dict[str, Any]:
         """
-        Kiểm tra trạng thái kết nối tới Google Gemini REST API
+        Kiểm tra trạng thái kết nối tới Google Gemini REST API với cơ chế tự động dò tìm mô hình hoạt động
         """
         if not self.api_key or len(self.api_key.strip()) < 10:
             return {
@@ -101,62 +118,59 @@ class GeminiProvider:
                 "mode": "local_rag"
             }
 
-        try:
-            url = self._get_api_url()
-            req_payload = {
-                "contents": [
-                    {
-                        "parts": [{"text": "Xin chào, phản hồi ngắn 'OK'."}]
+        last_error = ""
+        for model in self._get_candidate_models():
+            try:
+                url = self._get_api_url(model)
+                req_payload = {
+                    "contents": [
+                        {
+                            "parts": [{"text": "Xin chào, phản hồi ngắn 'OK'."}]
+                        }
+                    ],
+                    "generationConfig": {
+                        "maxOutputTokens": 10,
+                        "temperature": 0.1
                     }
-                ],
-                "generationConfig": {
-                    "maxOutputTokens": 10,
-                    "temperature": 0.1
                 }
-            }
-            req_data = json.dumps(req_payload).encode("utf-8")
-            req = urllib.request.Request(
-                url,
-                data=req_data,
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-            with urllib.request.urlopen(req, timeout=7) as resp:
-                if resp.status == 200:
-                    return {
-                        "connected": True,
-                        "status": "online",
-                        "model": self.model_name,
-                        "message": f"Kết nối Gemini REST API thành công ({self.model_name}).",
-                        "mode": "live_gemini"
-                    }
+                req_data = json.dumps(req_payload).encode("utf-8")
+                req = urllib.request.Request(
+                    url,
+                    data=req_data,
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=7) as resp:
+                    if resp.status == 200:
+                        self.model_name = model
+                        return {
+                            "connected": True,
+                            "status": "online",
+                            "model": self.model_name,
+                            "message": f"Kết nối Gemini REST API thành công ({self.model_name}).",
+                            "mode": "live_gemini"
+                        }
+            except urllib.error.HTTPError as e:
+                err_msg = e.read().decode("utf-8", errors="ignore")
+                last_error = f"HTTP {e.code}: {err_msg[:120]}"
+                logger.warning(f"Model {model} test failed: {last_error}")
+                # Nếu 404 (model retired) hoặc 503 (busy), thử model tiếp theo
+                if e.code in (404, 503):
+                    continue
                 else:
-                    return {
-                        "connected": False,
-                        "status": "offline_local_rag",
-                        "model": self.model_name,
-                        "message": f"API trả về mã trạng thái {resp.status}. Tự động chuyển sang Dynamic Local RAG.",
-                        "mode": "local_rag"
-                    }
-        except urllib.error.HTTPError as e:
-            err_msg = e.read().decode("utf-8", errors="ignore")
-            logger.warning(f"Gemini API connection test HTTP error {e.code}: {err_msg[:120]}")
-            return {
-                "connected": False,
-                "status": "offline_local_rag",
-                "model": self.model_name,
-                "message": f"Lỗi xác thực hoặc hết hạn ngạch ({e.code}). Chuyển sang Dynamic Local RAG.",
-                "mode": "local_rag"
-            }
-        except Exception as e:
-            logger.warning(f"Gemini API connection test error: {e}")
-            return {
-                "connected": False,
-                "status": "offline_local_rag",
-                "model": self.model_name,
-                "message": f"Không thể kết nối mạng ({str(e)[:80]}). Chuyển sang Dynamic Local RAG.",
-                "mode": "local_rag"
-            }
+                    break
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"Connection test error with {model}: {e}")
+                break
+
+        return {
+            "connected": False,
+            "status": "offline_local_rag",
+            "model": self.model_name,
+            "message": f"Không thể kết nối Gemini API ({last_error[:100]}). Tự động kích hoạt Dynamic Local RAG.",
+            "mode": "local_rag"
+        }
 
     def generate_with_image(
         self,
@@ -166,65 +180,75 @@ class GeminiProvider:
         system_instruction: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Gọi Gemini REST API đa phương thức với ảnh (Base64) và prompt
+        Gọi Gemini REST API đa phương thức với ảnh (Base64) và prompt kèm tự động Model Failover
         """
         if not self.api_key or len(self.api_key.strip()) < 10:
             logger.info("No Gemini API key configured. Delegating to Dynamic Local Solver.")
             return {"use_local_rag": True, "success": False, "error": "No API key"}
 
-        try:
-            b64_img = base64.b64encode(image_bytes).decode("utf-8")
-            parts = [
-                {
-                    "inline_data": {
-                        "mime_type": mime_type,
-                        "data": b64_img
-                    }
-                },
-                {"text": prompt}
-            ]
-            
-            payload = {
-                "contents": [{"parts": parts}],
-                "generationConfig": {
-                    "temperature": 0.2,
-                    "responseMimeType": "application/json"
+        b64_img = base64.b64encode(image_bytes).decode("utf-8")
+        parts = [
+            {
+                "inline_data": {
+                    "mime_type": mime_type,
+                    "data": b64_img
                 }
+            },
+            {"text": prompt}
+        ]
+        
+        payload = {
+            "contents": [{"parts": parts}],
+            "generationConfig": {
+                "temperature": 0.2,
+                "responseMimeType": "application/json"
+            }
+        }
+
+        if system_instruction:
+            payload["system_instruction"] = {
+                "parts": [{"text": system_instruction}]
             }
 
-            if system_instruction:
-                payload["system_instruction"] = {
-                    "parts": [{"text": system_instruction}]
-                }
+        req_data = json.dumps(payload).encode("utf-8")
+        last_error = ""
 
-            req_data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                self._get_api_url(),
-                data=req_data,
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
+        for model in self._get_candidate_models():
+            try:
+                req = urllib.request.Request(
+                    self._get_api_url(model),
+                    data=req_data,
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
 
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                raw_body = resp.read().decode("utf-8")
-                api_json = json.loads(raw_body)
-                
-                candidates = api_json.get("candidates", [])
-                if candidates:
-                    content_parts = candidates[0].get("content", {}).get("parts", [])
-                    if content_parts and "text" in content_parts[0]:
-                        response_text = content_parts[0]["text"]
-                        return safe_json_loads(response_text)
+                with urllib.request.urlopen(req, timeout=25) as resp:
+                    raw_body = resp.read().decode("utf-8")
+                    api_json = json.loads(raw_body)
+                    
+                    candidates = api_json.get("candidates", [])
+                    if candidates:
+                        content_parts = candidates[0].get("content", {}).get("parts", [])
+                        if content_parts and "text" in content_parts[0]:
+                            self.model_name = model
+                            logger.info(f"Gemini Vision call successful with model {model}")
+                            return safe_json_loads(content_parts[0]["text"])
 
-                return {"use_local_rag": True, "error": "No text in candidate response"}
+                    return {"use_local_rag": True, "error": "No text in candidate response"}
 
-        except urllib.error.HTTPError as e:
-            err_body = e.read().decode("utf-8", errors="ignore")
-            logger.error(f"Gemini REST API image call failed (HTTP {e.code}): {err_body[:150]}")
-            return {"use_local_rag": True, "error": f"HTTP {e.code}: {err_body[:100]}", "success": False}
-        except Exception as e:
-            logger.error(f"Gemini REST API image call exception: {e}")
-            return {"use_local_rag": True, "error": str(e), "success": False}
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode("utf-8", errors="ignore")
+                last_error = f"HTTP {e.code}: {err_body[:120]}"
+                logger.error(f"Gemini REST API image call failed with {model}: {last_error}")
+                if e.code in (404, 503):
+                    continue
+                return {"use_local_rag": True, "error": last_error, "success": False}
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"Gemini REST API image call exception with {model}: {e}")
+                return {"use_local_rag": True, "error": last_error, "success": False}
+
+        return {"use_local_rag": True, "error": last_error, "success": False}
 
     def generate_chat(
         self,
@@ -232,55 +256,65 @@ class GeminiProvider:
         system_instruction: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Gọi Gemini REST API chat văn bản
+        Gọi Gemini REST API chat văn bản kèm tự động Model Failover
         """
         if not self.api_key or len(self.api_key.strip()) < 10:
             return {"use_local_rag": True, "success": False, "error": "No API key"}
 
-        try:
-            payload = {
-                "contents": [
-                    {"parts": [{"text": prompt}]}
-                ],
-                "generationConfig": {
-                    "temperature": 0.3,
-                    "responseMimeType": "application/json"
-                }
+        payload = {
+            "contents": [
+                {"parts": [{"text": prompt}]}
+            ],
+            "generationConfig": {
+                "temperature": 0.3,
+                "responseMimeType": "application/json"
+            }
+        }
+
+        if system_instruction:
+            payload["system_instruction"] = {
+                "parts": [{"text": system_instruction}]
             }
 
-            if system_instruction:
-                payload["system_instruction"] = {
-                    "parts": [{"text": system_instruction}]
-                }
+        req_data = json.dumps(payload).encode("utf-8")
+        last_error = ""
 
-            req_data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                self._get_api_url(),
-                data=req_data,
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
+        for model in self._get_candidate_models():
+            try:
+                req = urllib.request.Request(
+                    self._get_api_url(model),
+                    data=req_data,
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
 
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                raw_body = resp.read().decode("utf-8")
-                api_json = json.loads(raw_body)
-                
-                candidates = api_json.get("candidates", [])
-                if candidates:
-                    content_parts = candidates[0].get("content", {}).get("parts", [])
-                    if content_parts and "text" in content_parts[0]:
-                        response_text = content_parts[0]["text"]
-                        return safe_json_loads(response_text)
+                with urllib.request.urlopen(req, timeout=18) as resp:
+                    raw_body = resp.read().decode("utf-8")
+                    api_json = json.loads(raw_body)
+                    
+                    candidates = api_json.get("candidates", [])
+                    if candidates:
+                        content_parts = candidates[0].get("content", {}).get("parts", [])
+                        if content_parts and "text" in content_parts[0]:
+                            self.model_name = model
+                            logger.info(f"Gemini Chat call successful with model {model}")
+                            return safe_json_loads(content_parts[0]["text"])
 
-                return {"use_local_rag": True, "error": "No text in candidate response"}
+                    return {"use_local_rag": True, "error": "No text in candidate response"}
 
-        except urllib.error.HTTPError as e:
-            err_body = e.read().decode("utf-8", errors="ignore")
-            logger.error(f"Gemini REST API chat call failed (HTTP {e.code}): {err_body[:150]}")
-            return {"use_local_rag": True, "error": f"HTTP {e.code}", "success": False}
-        except Exception as e:
-            logger.error(f"Gemini REST API chat call exception: {e}")
-            return {"use_local_rag": True, "error": str(e), "success": False}
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode("utf-8", errors="ignore")
+                last_error = f"HTTP {e.code}: {err_body[:120]}"
+                logger.error(f"Gemini REST API chat call failed with {model}: {last_error}")
+                if e.code in (404, 503):
+                    continue
+                return {"use_local_rag": True, "error": last_error, "success": False}
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"Gemini REST API chat call exception with {model}: {e}")
+                return {"use_local_rag": True, "error": last_error, "success": False}
+
+        return {"use_local_rag": True, "error": last_error, "success": False}
 
     def _generate_mock_solution(self) -> Dict[str, Any]:
         from backend.app.services.calculator_service import calculator

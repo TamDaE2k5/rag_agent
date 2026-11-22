@@ -16,7 +16,7 @@ if env_path.exists():
 class Settings:
     def __init__(self):
         self.GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-        self.GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        self.GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
         self.DEFAULT_LANGUAGE: str = os.getenv("DEFAULT_LANGUAGE", "vi")
         
         self.TEXTBOOK_PDF_PATH: str = os.getenv(
