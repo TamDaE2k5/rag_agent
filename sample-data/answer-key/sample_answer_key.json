@@ -1,15 +1,34 @@
 {
   "TC-01": {
+    "title": "Bài tập mã kiểm soát lỗi ngang dọc (水平垂直一致校验) từ ảnh anh_bai_tap_mau.jpeg",
+    "chapter": "Chương 3: Truyền thông dữ liệu tự động hóa lưới điện phân phối (Trang 45)",
+    "solution_steps": [
+      "Bước 1: Xác định quy tắc kiểm tra chẵn (偶校验): Tổng số bit '1' trong mỗi hàng hoặc mỗi cột (bao gồm cả bit kiểm tra) phải là số chẵn.",
+      "Bước 2: Tính toán mã kiểm tra ngang (Horizontal Parity) cho 5 hàng: Hàng 1 (4 bit 1 -> thêm 0), Hàng 2 (2 bit 1 -> thêm 0), Hàng 3 (4 bit 1 -> thêm 0), Hàng 4 (2 bit 1 -> thêm 0), Hàng 5 (1 bit 1 -> thêm 1). Kết quả Ô trống (1) là '0 0 0 0 1'.",
+      "Bước 3: Tính toán mã kiểm tra dọc (Vertical Parity) cho 10 cột: Cột 1 (1 bit 1 -> thêm 1), Cột 2 (2 bit 1 -> thêm 0), Cột 3 (2 bit 1 -> thêm 0), Cột 4 (2 bit 1 -> thêm 0), Cột 5 (1 bit 1 -> thêm 1), Cột 6 (1 bit 1 -> thêm 1), Cột 7 (2 bit 1 -> thêm 0), Cột 8 (1 bit 1 -> thêm 1), Cột 9 (1 bit 1 -> thêm 1), Cột 10 (1 bit 1 -> thêm 1). Kết quả Ô trống (2) là '1 0 0 0 1 1 0 1 1 1'."
+    ],
+    "final_answer": "Ô trống (1): 0 0 0 0 1; Ô trống (2): 1 0 0 0 1 1 0 1 1 1",
+    "reference_page": "PDF giáo trình, trang 45",
+    "verified": true
+  },
+  "TC-02": {
+    "summary": "Recloser thực hiện chu trình cắt - đóng lại, Sectionalizer đếm số lần mất điện trong trạng thái không có dòng điện để mở cô lập phân đoạn bị sự cố.",
+    "reference_page": "PDF giáo trình, trang 140",
+    "verified": true
+  },
+  "TC-03": {
+    "summary": "Dòng ngắn mạch 3 pha đối xứng tính bằng công thức I_sc = U_tb / (sqrt(3) * Z_total) = 10.5 / (1.732 * 1.2) = 5.052 kA.",
+    "reference_page": "PDF giáo trình, trang 88",
+    "verified": true
+  },
+  "TC-04": {
     "solution_steps": [
       "Bước 1: Tính góc lệch pha phi và công suất phản kháng Q = P * tan(phi) = 1200 * 0.62 = 744 kvar",
       "Bước 2: Áp dụng công thức tổn thất điện áp Delta U = (P*R + Q*X) / U_n = (1200*2.5 + 744*3.2) / 10 = 538.08 V",
       "Bước 3: Tính phần trăm tổn thất Delta U% = (538.08 / 10000) * 100% = 5.38%"
     ],
     "final_answer": "538.08 V (5.38%)",
-    "verified": true
-  },
-  "TC-02": {
-    "summary": "Recloser thực hiện chu trình cắt - đóng lại, Sectionalizer đếm số lần mất điện trong trạng thái không có dòng điện để mở cô lập phân đoạn bị sự cố.",
+    "reference_page": "PDF giáo trình, trang 42",
     "verified": true
   }
 }

@@ -63,5 +63,28 @@ class TestElectricalCalculator(unittest.TestCase):
         self.assertTrue(res["success"])
         self.assertGreater(res["q_c_kvar"], 0)
 
+    def test_horizontal_vertical_parity(self):
+        matrix = [
+            [1, 1, 0, 0, 0, 1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0, 0, 0, 0, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+            [0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+            [1, 1, 1, 0, 1, 1, 0, 1, 1, 1]
+        ]
+        res = calculator.calculate_horizontal_vertical_parity(matrix, parity_type="odd")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["rows"], 5)
+        self.assertEqual(res["cols"], 10)
+        self.assertEqual(res["odd_parity"]["horizontal"], [0, 0, 0, 1, 1])
+        self.assertEqual(res["even_parity"]["horizontal"], [1, 1, 1, 0, 0])
+        self.assertEqual(len(res["vertical_parity"]), 10)
+
+    def test_crc_calculation(self):
+        # Test CRC with data: 101100010, poly: 10011 (x^4 + x + 1)
+        res = calculator.calculate_crc(data_bits="101100010", generator_poly="10011")
+        self.assertTrue(res["success"])
+        self.assertEqual(len(res["remainder"]), 4)
+        self.assertEqual(len(res["codeword"]), 9 + 4)
+
 if __name__ == "__main__":
     unittest.main()

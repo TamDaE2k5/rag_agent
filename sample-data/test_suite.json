@@ -1,24 +1,27 @@
 {
   "project": "AI Agent Tự động hóa Lưới điện Phân phối",
-  "version": "1.2.0",
-  "total_test_cases": 3,
+  "version": "1.3.0",
+  "total_test_cases": 4,
   "test_cases": [
     {
       "id": "TC-01",
-      "type": "calculation",
+      "type": "parity_check",
       "image": "sample-data/questions/anh_bai_tap_mau.jpeg",
-      "title": "Tính toán tổn thất điện áp đường dây trung áp 10kV",
+      "title": "Kiểm tra mã kiểm soát lỗi ngang dọc (水平垂直一致校验) trong truyền tin tự động hóa lưới điện",
       "input_language": "zh-CN",
       "expected_output_language": "vi",
+      "chapter": "Chương 3: Truyền thông dữ liệu tự động hóa lưới điện phân phối (第3章 配电网自动化数据通信)",
       "expected_parameters": {
-        "U_n": "10 kV",
-        "P": "1200 kW",
-        "cos_phi": 0.85,
-        "R": "2.5 Ohm",
-        "X": "3.2 Ohm"
+        "check_method": "水平垂直一致校验 (Horizontal-Vertical Parity Check)",
+        "matrix_size": "l=5 hàng, m=10 cột",
+        "parity_type": "even (chẵn / 偶校验)"
       },
-      "expected_result": "Delta U = 538.08 V (5.38%)",
-      "expected_reference_page": "PDF giáo trình, trang 42"
+      "expected_blanks": {
+        "blank_1_horizontal": "0 0 0 0 1",
+        "blank_2_vertical": "1 0 0 0 1 1 0 1 1 1"
+      },
+      "expected_result": "Ô trống (1): 0 0 0 0 1 (Mã kiểm tra ngang); Ô trống (2): 1 0 0 0 1 1 0 1 1 1 (Mã kiểm tra dọc)",
+      "expected_reference_page": "PDF giáo trình, trang 45"
     },
     {
       "id": "TC-02",
@@ -40,6 +43,22 @@
       },
       "expected_result": "I_sc^(3) = 5.052 kA",
       "expected_reference_page": "PDF giáo trình, trang 88"
+    },
+    {
+      "id": "TC-04",
+      "type": "calculation",
+      "title": "Tính toán tổn thất điện áp đường dây trung áp 10kV",
+      "input_language": "zh-CN",
+      "expected_output_language": "vi",
+      "expected_parameters": {
+        "U_n": "10 kV",
+        "P": "1200 kW",
+        "cos_phi": 0.85,
+        "R": "2.5 Ohm",
+        "X": "3.2 Ohm"
+      },
+      "expected_result": "Delta U = 538.08 V (5.38%)",
+      "expected_reference_page": "PDF giáo trình, trang 42"
     }
   ]
 }

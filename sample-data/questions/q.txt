@@ -1,0 +1,4 @@
+1. 配电网自动化系统的智能化体现在哪儿方面？
+2. Có bao nhiêu sơ đồ nối dây lưới điện phân phối?
+3. Các thiết bị nhất thứ trong lưới điện phân phối?
+4. 配电网自动化系统的功能?

@@ -7,9 +7,10 @@ import { SourceExcerptModal } from './SourceExcerptModal';
 interface ChatGroundedProps {
   language: 'vi' | 'zh-CN';
   labels: Record<string, string>;
+  isLocalRag?: boolean;
 }
 
-export const ChatGrounded: React.FC<ChatGroundedProps> = ({ language, labels }) => {
+export const ChatGrounded: React.FC<ChatGroundedProps> = ({ language, labels, isLocalRag = false }) => {
   const defaultInitialMessage = {
     role: 'assistant' as const,
     text:
@@ -59,8 +60,24 @@ export const ChatGrounded: React.FC<ChatGroundedProps> = ({ language, labels }) 
 
   return (
     <div className="max-w-4xl mx-auto py-6 px-4 space-y-4">
+      {/* Informative status alert when in Local RAG mode */}
+      {isLocalRag && (
+        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300 flex items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            <span>
+              {labels.local_rag_banner ||
+                '⚡ Chế độ Local RAG: Đang phân tích và đối chiếu trực tiếp từ 233 trang PDF giáo trình tiếng Trung 《配电网自动化技术》.'}
+            </span>
+          </div>
+          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold whitespace-nowrap">
+            Local RAG
+          </span>
+        </div>
+      )}
+
       {/* Top note bar with clear button */}
-      <div className="flex items-center justify-between gap-2 p-3.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300">
+      <div className="flex items-center justify-between gap-2 p-3.5 bg-slate-900/60 border border-slate-800 rounded-xl text-xs text-slate-300">
         <div className="flex items-center gap-2">
           <BookOpen className="w-4 h-4 flex-shrink-0 text-blue-400" />
           <span>

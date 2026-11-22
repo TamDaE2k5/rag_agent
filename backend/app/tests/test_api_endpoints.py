@@ -16,6 +16,25 @@ class TestAPIEndpoints(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["status"], "healthy")
 
+    def test_settings_and_test_connection(self):
+        # 1. Get settings
+        response = self.client.get("/api/v1/settings")
+        self.assertEqual(response.status_code, 200)
+        s_data = response.json()
+        self.assertIn("model_name", s_data)
+        self.assertIn("total_indexed_pages", s_data)
+
+        # 2. Test connection GET
+        conn_res_get = self.client.get("/api/v1/settings/test-connection")
+        self.assertEqual(conn_res_get.status_code, 200)
+        conn_data = conn_res_get.json()
+        self.assertIn("status", conn_data)
+        self.assertIn("mode", conn_data)
+
+        # 3. Test connection POST
+        conn_res_post = self.client.post("/api/v1/settings/test-connection")
+        self.assertEqual(conn_res_post.status_code, 200)
+
     def test_history_crud(self):
         # 1. Get history list
         response = self.client.get("/api/v1/history")
@@ -31,9 +50,10 @@ class TestAPIEndpoints(unittest.TestCase):
         detail_data = detail_res.json()
         self.assertEqual(detail_data["session_id"], first_id)
 
-    def test_chat_endpoint(self):
+    def test_chat_endpoint_dynamic(self):
+        # Test câu hỏi về chức năng hệ thống tự động hóa
         payload = {
-            "question": "Dao cắt tự đóng lại Recloser có công dụng gì?",
+            "question": "配电网自动化系统的功能?",
             "language": "vi"
         }
         res = self.client.post("/api/v1/chat", json=payload)
@@ -42,6 +62,7 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertIn("direct_answer", data)
         self.assertIn("session_id", data)
         self.assertIn("textbook_reference", data)
+        self.assertTrue(data["textbook_reference"].startswith("PDF giáo trình, trang"))
 
     def test_confirm_parameters(self):
         payload = {

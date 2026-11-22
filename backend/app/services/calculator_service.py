@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 from backend.app.core.logger import logger
 
 try:
@@ -10,7 +10,8 @@ except ImportError:
 class ElectricalCalculator:
     """
     Bộ công cụ tính toán an toàn cho kỹ thuật điện phân phối (FR-10, FR-11)
-    Đảm bảo tính toán xác định, không phụ thuộc vào việc LLM tự nhẩm số.
+    Bao gồm tính toán tổn thất điện áp, ngắn mạch, bù công suất phản kháng,
+    và kiểm tra mã truyền thông dữ liệu (Chẵn lẻ ngang dọc, CRC).
     """
     
     @staticmethod
@@ -26,8 +27,6 @@ class ElectricalCalculator:
         Delta U = (P*R + Q*X) / U_n  (V hoặc kV)
         """
         try:
-            # U ở kV, P ở kW, Q ở kvar -> delta_u = (P*R + Q*X) / (U_kv * 1000) (kV) -> nhân 1000 ra V
-            # delta_u_v = (p_kw * r_ohm + q_kvar * x_ohm) / u_kv (V)
             delta_u_v = (p_kw * r_ohm + q_kvar * x_ohm) / u_kv
             delta_u_kv = delta_u_v / 1000.0
             u_norm_v = u_kv * 1000.0
@@ -60,9 +59,9 @@ class ElectricalCalculator:
         """
         try:
             s_sq = (p_kw ** 2 + q_kvar ** 2)
-            u_sq = (u_kv * 1000.0) ** 2 # V^2
-            delta_p_kw = (s_sq * 1000.0 / u_sq) * r_ohm # kW
-            delta_q_kvar = (s_sq * 1000.0 / u_sq) * x_ohm # kvar
+            u_sq = (u_kv * 1000.0) ** 2
+            delta_p_kw = (s_sq * 1000.0 / u_sq) * r_ohm
+            delta_q_kvar = (s_sq * 1000.0 / u_sq) * x_ohm
             
             return {
                 "success": True,
@@ -84,7 +83,8 @@ class ElectricalCalculator:
         I_sc^(3) = U_tb / (sqrt(3) * Z_total)
         """
         try:
-            # U_mean ở kV, Z ở Ohm -> I_sc ở kA
+            if z_total_ohm <= 0:
+                return {"success": False, "error": "Z_total phải lớn hơn 0"}
             i_sc_ka = u_mean_kv / (math.sqrt(3) * z_total_ohm)
             i_sc_a = i_sc_ka * 1000.0
             return {
@@ -124,9 +124,116 @@ class ElectricalCalculator:
             return {"success": False, "error": str(e)}
 
     @staticmethod
+    def calculate_horizontal_vertical_parity(
+        matrix: List[List[int]],
+        parity_type: str = "odd"
+    ) -> Dict[str, Any]:
+        """
+        Tính toán mã kiểm tra chẵn lẻ ngang dọc (Horizontal-Vertical Parity Check)
+        căn cứ theo Bảng 3-2 giáo trình trang 45.
+        - Kiểm tra ngang (Horizontal): tính bit kiểm tra cho từng hàng.
+        - Kiểm tra dọc (Vertical): tính bit kiểm tra cho từng cột.
+        - Chuẩn lẻ (odd): tổng số bit 1 (bao gồm cả bit kiểm tra) là số lẻ -> bit = (sum + 1) % 2
+        - Chuẩn chẵn (even): tổng số bit 1 (bao gồm cả bit kiểm tra) là số chẵn -> bit = sum % 2
+        """
+        try:
+            rows = len(matrix)
+            if rows == 0:
+                return {"success": False, "error": "Ma trận trống"}
+            cols = len(matrix[0])
+
+            row_sums = [sum(r) for r in matrix]
+            col_sums = [sum(matrix[r][c] for r in range(rows)) for c in range(cols)]
+
+            h_odd = [(s + 1) % 2 for s in row_sums]
+            v_odd = [(s + 1) % 2 for s in col_sums]
+
+            h_even = [s % 2 for s in row_sums]
+            v_even = [s % 2 for s in col_sums]
+
+            h_bits = h_odd if parity_type == "odd" else h_even
+            v_bits = v_odd if parity_type == "odd" else v_even
+
+            return {
+                "success": True,
+                "rows": rows,
+                "cols": cols,
+                "parity_type": parity_type,
+                "horizontal_parity": h_bits,
+                "vertical_parity": v_bits,
+                "horizontal_str": " ".join(str(b) for b in h_bits),
+                "vertical_str": " ".join(str(b) for b in v_bits),
+                "odd_parity": {
+                    "horizontal": h_odd,
+                    "vertical": v_odd,
+                    "horizontal_str": " ".join(str(b) for b in h_odd),
+                    "vertical_str": " ".join(str(b) for b in v_odd)
+                },
+                "even_parity": {
+                    "horizontal": h_even,
+                    "vertical": v_even,
+                    "horizontal_str": " ".join(str(b) for b in h_even),
+                    "vertical_str": " ".join(str(b) for b in v_even)
+                },
+                "formula_latex": r"P_h(i) = \left(\sum_{j=1}^{m} d_{i,j} + 1\right) \bmod 2, \quad P_v(j) = \left(\sum_{i=1}^{l} d_{i,j} + 1\right) \bmod 2",
+                "calculation_str": f"Ngang (Blank 1): {' '.join(str(b) for b in h_bits)} | Dọc (Blank 2): {' '.join(str(b) for b in v_bits)}"
+            }
+        except Exception as e:
+            logger.error(f"Error calculating horizontal-vertical parity: {e}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def calculate_crc(data_bits: str, generator_poly: str) -> Dict[str, Any]:
+        """
+        Tính toán mã dư thừa vòng CRC (Cyclic Redundancy Check) bằng phép chia đa thức modulo 2 (XOR)
+        căn cứ theo Mục 3.2.2 giáo trình trang 46-47: C(x) = M(x)*x^r + R(x).
+        """
+        try:
+            r = len(generator_poly) - 1
+            if r <= 0:
+                return {"success": False, "error": "Đa thức sinh phải có ít nhất bậc 1"}
+
+            # M(x) * x^r: thêm r bit 0 vào cuối
+            appended_data = list(data_bits + "0" * r)
+            poly = list(generator_poly)
+            k = len(data_bits)
+
+            # Phép chia modulo 2
+            quotient = []
+            for i in range(k):
+                if appended_data[i] == '1':
+                    quotient.append('1')
+                    for j in range(len(poly)):
+                        bit1 = int(appended_data[i + j])
+                        bit2 = int(poly[j])
+                        appended_data[i + j] = str(bit1 ^ bit2)
+                else:
+                    quotient.append('0')
+
+            remainder = "".join(appended_data[-r:])
+            codeword = data_bits + remainder
+
+            return {
+                "success": True,
+                "data_bits": data_bits,
+                "generator_poly": generator_poly,
+                "quotient": "".join(quotient),
+                "remainder": remainder,
+                "codeword": codeword,
+                "crc_bits": remainder,
+                "formula_latex": r"C(x) = M(x) \cdot x^r + R(x), \quad R(x) = \text{rem}\left(\frac{M(x) \cdot x^r}{G(x)}\right)",
+                "calculation_str": f"Data: {data_bits}, G(x): {generator_poly} -> CRC: {remainder}, Codeword: {codeword}"
+            }
+        except Exception as e:
+            logger.error(f"Error calculating CRC: {e}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
     def safe_evaluate_formula(expression_str: str, variables: Dict[str, float]) -> Optional[float]:
         """Đánh giá an toàn biểu thức toán học thay số bằng Sympy"""
         try:
+            if sp is None:
+                return None
             expr = sp.sympify(expression_str)
             result = expr.evalf(subs=variables)
             return float(result)

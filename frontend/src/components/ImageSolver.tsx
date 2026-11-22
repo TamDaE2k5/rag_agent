@@ -26,9 +26,10 @@ import { SourceExcerptModal } from './SourceExcerptModal';
 interface ImageSolverProps {
   language: 'vi' | 'zh-CN';
   labels: Record<string, string>;
+  isLocalRag?: boolean;
 }
 
-export const ImageSolver: React.FC<ImageSolverProps> = ({ language, labels }) => {
+export const ImageSolver: React.FC<ImageSolverProps> = ({ language, labels, isLocalRag = false }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rotateAngle, setRotateAngle] = useState<number>(0);
@@ -257,6 +258,22 @@ export const ImageSolver: React.FC<ImageSolverProps> = ({ language, labels }) =>
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto py-6 px-4">
+      {/* Informative status alert when in Local RAG mode */}
+      {isLocalRag && (
+        <div className="lg:col-span-12 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300 flex items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            <span>
+              {labels.local_rag_banner ||
+                '⚡ Chế độ Local RAG: Đang phân tích và đối chiếu trực tiếp từ 233 trang PDF giáo trình tiếng Trung 《配电网自动化技术》 (hoạt động ngoại tuyến độc lập).'}
+            </span>
+          </div>
+          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold whitespace-nowrap hidden sm:inline">
+            Offline Grounded
+          </span>
+        </div>
+      )}
+
       {/* Toast notification */}
       {toastMsg && (
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 animate-bounce">

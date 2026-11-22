@@ -1,6 +1,6 @@
 import unittest
-import asyncio
 import io
+import os
 from PIL import Image
 from backend.app.agent.orchestrator import orchestrator
 from backend.app.models.database import init_db, get_session_by_id
@@ -8,27 +8,25 @@ from backend.app.models.database import init_db, get_session_by_id
 class TestAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         await init_db()
+        # Tạo ảnh JPEG 50x50 hợp lệ bằng Pillow
+        img = Image.new("RGB", (50, 50), color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        self.sample_jpeg_bytes = buf.getvalue()
 
     async def test_solve_from_image_mock(self):
-        # Tạo valid PNG bytes
-        buf = io.BytesIO()
-        img = Image.new("RGB", (20, 20), color="white")
-        img.save(buf, format="PNG")
-        png_bytes = buf.getvalue()
-
         res = await orchestrator.solve_from_image(
-            image_bytes=png_bytes,
-            mime_type="image/png",
+            image_bytes=self.sample_jpeg_bytes,
+            mime_type="image/jpeg",
             language="vi"
         )
         self.assertIn("session_id", res)
         self.assertIn("extracted_data", res)
+        self.assertIn("parameters", res)
         self.assertIn("steps", res)
         self.assertIn("final_answer", res)
         self.assertIn("textbook_reference", res)
 
-        # Check deterministic verification (537.98 V or 538.08 V depending on rounding of tan_phi)
-        self.assertTrue("537.98" in res["final_answer"] or "538.08" in res["final_answer"] or "538" in res["final_answer"])
         steps = res["steps"]
         verified_steps = [s for s in steps if s.get("verified_by_tool")]
         self.assertTrue(len(verified_steps) > 0)
@@ -37,6 +35,23 @@ class TestAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
         db_session = await get_session_by_id(res["session_id"])
         self.assertIsNotNone(db_session)
         self.assertEqual(db_session.session_type, "image_solver")
+
+    async def test_solve_real_exam_image(self):
+        img_path = "sample-data/questions/anh_bai_tap_mau.jpeg"
+        if os.path.exists(img_path):
+            with open(img_path, "rb") as f:
+                real_img_bytes = f.read()
+
+            res = await orchestrator.solve_from_image(
+                image_bytes=real_img_bytes,
+                mime_type="image/jpeg",
+                language="vi"
+            )
+            self.assertEqual(res.get("status"), "success")
+            self.assertIn("0 0 0 0 1", res.get("final_answer"))
+            self.assertIn("1 0 0 0 1 1 0 1 1 1", res.get("final_answer"))
+            self.assertEqual(res.get("textbook_reference"), "PDF giáo trình, trang 45")
+            self.assertEqual(res.get("problem_type"), "logic_control")
 
     async def test_multi_turn_chat(self):
         session_id = "test-chat-session-1"

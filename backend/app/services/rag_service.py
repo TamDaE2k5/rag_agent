@@ -8,10 +8,40 @@ from backend.app.core.config import settings
 from backend.app.core.logger import logger
 from backend.app.services.vector_store import vector_store
 
+VI_TO_ZH_TERMS = {
+    "sơ đồ nối dây": "接线",
+    "nối dây": "接线",
+    "thiết bị nhất thứ": "一次设备",
+    "nhất thứ": "一次设备",
+    "thiết bị nhị thứ": "二次设备",
+    "nhị thứ": "二次设备",
+    "lưới điện phân phối": "配电网",
+    "lưới phân phối": "配电网",
+    "tự động hóa": "自动化",
+    "thông minh": "智能化",
+    "trí tuệ": "智能化",
+    "chức năng": "功能",
+    "tổn thất điện áp": "电压降",
+    "sụt áp": "电压降",
+    "ngắn mạch": "短路",
+    "bù công suất": "无功补偿",
+    "dao cắt tự đóng lại": "重合器",
+    "recloser": "重合器",
+    "dao phân đoạn": "分段器",
+    "sectionalizer": "分段器",
+    "truyền thông": "通信",
+    "chẵn lẻ": "奇偶校验",
+    "chẵn lẻ ngang dọc": "水平垂直一致校验",
+    "phân đoạn": "分段",
+    "sự cố": "故障",
+    "cô lập sự cố": "故障隔离"
+}
+
 class RAGService:
     """
     Dịch vụ RAG kết hợp (Hybrid Search: Vector Search + Keyword Search)
     Nguồn tri thức duy nhất: PDF giáo trình tiếng Trung (FR-14, FR-23)
+    Hỗ trợ cầu nối ngôn ngữ Việt - Trung (Bilingual terminology expansion)
     """
     def __init__(self):
         self.index_file = os.path.join(settings.INDEX_DIR, "pages.json")
@@ -33,7 +63,6 @@ class RAGService:
         else:
             logger.warning(f"Index file not found at {self.index_file}. Run scripts/ingest_pdf.py to generate.")
 
-        # Nạp từ vựng 256 bigram để tạo vector truy vấn đồng bộ với vectors.npy
         if os.path.exists(self.vocab_file):
             try:
                 with open(self.vocab_file, "r", encoding="utf-8") as f:
@@ -43,7 +72,6 @@ class RAGService:
                 logger.error(f"Error loading vocab file: {e}")
                 self.vocab = []
         elif self.pages:
-            # Tự động tính toán top vocab nếu file chưa có
             from collections import Counter
             corpus = [p["text"] for p in self.pages]
             vocab_counter = Counter()
@@ -59,6 +87,17 @@ class RAGService:
             except Exception as ex:
                 logger.warning(f"Could not persist vocab file: {ex}")
 
+    def expand_query(self, query: str) -> str:
+        """Mở rộng từ khóa chuyên ngành Việt - Trung để tra cứu chính xác"""
+        q_lower = query.lower()
+        extra_terms = []
+        for vi, zh in VI_TO_ZH_TERMS.items():
+            if vi in q_lower:
+                extra_terms.append(zh)
+        if extra_terms:
+            return query + " " + " ".join(extra_terms)
+        return query
+
     def vectorize_query(self, query: str) -> np.ndarray:
         """
         Chuyển đổi câu truy vấn thành vector đặc trưng trong không gian 256 chiều
@@ -66,9 +105,11 @@ class RAGService:
         """
         if not self.vocab:
             return np.zeros(256, dtype=np.float32)
+        
+        expanded = self.expand_query(query)
         v = np.zeros(len(self.vocab), dtype=np.float32)
         for i, term in enumerate(self.vocab):
-            count = query.count(term)
+            count = expanded.count(term)
             if count > 0:
                 v[i] = 1.0 + math.log(count)
         norm = np.linalg.norm(v)
@@ -77,10 +118,6 @@ class RAGService:
         return v
 
     def embed_text_with_google(self, text: str) -> Optional[List[float]]:
-        """
-        Hỗ trợ tạo vector embedding qua Google Gemini Embedding API (models/text-embedding-004)
-        khi người dùng cấu hình và yêu cầu.
-        """
         if not settings.GEMINI_API_KEY:
             return None
         try:
@@ -117,7 +154,8 @@ class RAGService:
             if not self.pages:
                 return []
 
-        keywords = [k.strip() for k in re.split(r"[\s,;，、]+", query) if len(k.strip()) >= 2]
+        expanded = self.expand_query(query)
+        keywords = [k.strip() for k in re.split(r"[\s,;，、]+", expanded) if len(k.strip()) >= 2]
         if not keywords:
             keywords = [query.strip()]
 
@@ -145,7 +183,7 @@ class RAGService:
         Tìm kiếm Hybrid RAG (FR-23):
         1. Thực hiện Vector Search bằng Cosine Similarity trên vectors.npy (233 trang).
         2. Thực hiện Keyword Search (Sparse Retrieval) dựa trên tần suất xuất hiện từ khóa.
-        3. Kết hợp và xếp hạng lại để đảm bảo không bỏ sót thuật ngữ và trích dẫn chuẩn số trang.
+        3. Kết hợp và xếp hạng lại.
         """
         vector_results = []
         if vector_store.embeddings is not None and len(vector_store.metadata) > 0:
@@ -163,14 +201,12 @@ class RAGService:
         if not keyword_results:
             return vector_results[:top_k]
 
-        # Chuẩn hóa điểm keyword
         max_kw_score = max((r.get("score", 1.0) for r in keyword_results), default=1.0)
         if max_kw_score <= 0:
             max_kw_score = 1.0
 
         page_dict: Dict[int, Dict[str, Any]] = {}
 
-        # Gộp điểm Vector Search (trọng số 0.6)
         for r in vector_results:
             p_num = r["page_number"]
             sim = r.get("similarity_score", 0.0)
@@ -183,7 +219,6 @@ class RAGService:
                 "keyword_score": 0.0
             }
 
-        # Gộp điểm Keyword Search (trọng số 0.4)
         for r in keyword_results:
             p_num = r["page_number"]
             norm_kw = (r.get("score", 0.0) / max_kw_score) * 0.4

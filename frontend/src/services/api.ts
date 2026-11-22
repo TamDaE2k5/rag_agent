@@ -11,7 +11,48 @@ export interface TextbookExcerpt {
   confidence?: number;
 }
 
+export interface ConnectionStatus {
+  online: boolean;
+  mode: 'cloud_gemini' | 'local_rag';
+  model_name?: string;
+  has_api_key?: boolean;
+  message?: string;
+}
+
 export const api = {
+  async testConnection(): Promise<ConnectionStatus> {
+    try {
+      const res = await axios.get<any>(`${API_BASE}/settings/test-connection`, { timeout: 3000 });
+      const data = res.data;
+      return {
+        online: Boolean(data.online ?? data.status === 'online'),
+        mode: (data.mode || (data.online ? 'cloud_gemini' : 'local_rag')) as 'cloud_gemini' | 'local_rag',
+        model_name: data.model_name || data.model || 'gemini-1.5-flash',
+        has_api_key: Boolean(data.has_api_key),
+        message: data.message || (data.online ? 'Gemini API đã kết nối trực tiếp' : 'Đang chạy Local RAG (Chế độ tự hành không phụ thuộc cloud)'),
+      };
+    } catch {
+      try {
+        const fallbackRes = await axios.get<any>(`${API_BASE}/settings`, { timeout: 2500 });
+        const hasKey = Boolean(fallbackRes.data?.has_api_key);
+        return {
+          online: hasKey,
+          mode: hasKey ? 'cloud_gemini' : 'local_rag',
+          model_name: fallbackRes.data?.model_name || 'gemini-1.5-flash',
+          has_api_key: hasKey,
+          message: hasKey ? 'Gemini API trực tiếp khả dụng' : 'Local RAG Mode (Tra cứu cục bộ từ 233 trang PDF giáo trình)',
+        };
+      } catch {
+        return {
+          online: false,
+          mode: 'local_rag',
+          model_name: 'offline-local-rag',
+          has_api_key: false,
+          message: 'Local RAG Mode (Chế độ ngoại tuyến từ cơ sở tri thức)',
+        };
+      }
+    }
+  },
   async solveImage(file: File, rotateAngle: number = 0, language: string = 'vi'): Promise<SolutionResponse> {
     const formData = new FormData();
     formData.append('file', file);
